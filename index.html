@@ -1,36 +1,611 @@
 <!DOCTYPE html>
-<html xmlns="https://www.w3.org/1999/xhtml">
+<html lang="en">
 <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    <link rel="stylesheet" type="text/css" href="./files/styles.css">
-    <script src="./files/jquery.min.js"></script>
-    <title>Pau Olmo</title>
-    <link href="https://placehold.co/favicon.ico" rel="icon" type="image/x-icon">
-    <meta name="viewport" content="width=device-width; initial-scale=1.0;">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio Piroecología</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #FFFFFF;
+        }
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+            cursor: grab;
+            position: fixed;
+            z-index: 1;
+        }
+        canvas:active {
+            cursor: grabbing;
+        }
+        section {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #FFFFFF;
+            display: none;
+            z-index: 0;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+        section.visible {
+            display: block;
+            opacity: 1;
+        }
+        .section-content {
+            padding: 2rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            font-family: Arial, sans-serif;
+            color: #008DD5;
+            margin-bottom: 2rem;
+        }
+        p {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+        }
+    </style>
 </head>
 <body>
-    <div class="v6_3">
-        <nav class="main-nav">
-            <div class="main-nav-left">
-                <a href="index.html">pau olmo</a>
-            </div>
-            <div class="main-nav-right">
-                <a href="about.html">about</a>
-                <a href="writings.html">writings</a>
-                <a href="contact.html">contact</a>
-            </div>
-        </nav>
+    <canvas id="fireCanvas"></canvas>
+    <section id="investigacion">
+        <div class="section-content">
+            <h1>Investigación en Piroecología</h1>
+            <p>Investigación sobre la dinámica de los incendios forestales y su impacto en los ecosistemas.</p>
+        </div>
+    </section>
 
-        <a href="project-1.html" class="v6_13"><img src="https://placehold.co/405x259" alt="Project 1"></a>
-        <a href="project-2.html" class="v6_14"><img src="https://placehold.co/405x318" alt="Project 2"></a>
-        <a href="project-3.html" class="v6_18"><img src="https://placehold.co/405x544" alt="Project 3"></a>
-        <a href="project-4.html" class="v6_19"><img src="https://placehold.co/405x259" alt="Project 4"></a>
-        <a href="project-5.html" class="v6_17"><img src="https://placehold.co/405x318" alt="Project 5"></a>
-        <a href="project-6.html" class="v6_16"><img src="https://placehold.co/405x249" alt="Project 6"></a>
-        <a href="project-7.html" class="v6_15"><img src="https://placehold.co/405x310" alt="Project 7"></a>
-        <a href="project-8.html" class="v6_20"><img src="https://placehold.co/405x251" alt="Project 8"></a>
-    </div>
+    <section id="proyectos">
+        <div class="section-content">
+            <h1>Proyectos</h1>
+            <p>Proyectos de investigación y gestión forestal relacionados con el fuego.</p>
+        </div>
+    </section>
 
-    <script src="./files/scramble.js"></script>
+    <section id="publicaciones">
+        <div class="section-content">
+            <h1>Publicaciones</h1>
+            <p>Artículos científicos y publicaciones sobre piroecología.</p>
+        </div>
+    </section>
+
+    <section id="contacto">
+        <div class="section-content">
+            <h1>Contacto</h1>
+            <p>Información de contacto y colaboración.</p>
+        </div>
+    </section>
+
+    <script>
+        const canvas = document.getElementById("fireCanvas");
+        const ctx = canvas.getContext("2d");
+
+        // Variables para el desplazamiento
+        let offsetX = 0;
+        let offsetY = 0;
+        let isDragging = false;
+        let lastX = 0;
+        let lastY = 0;
+        const MOVE_SPEED = 50;
+
+        // Límites de navegación
+        function getBoundaries() {
+            const totalWidth = size * cellSize;
+            const totalHeight = size * cellSize;
+            const maxOffsetX = canvas.width - totalWidth;
+            const maxOffsetY = canvas.height - totalHeight;
+            return {
+                minX: maxOffsetX,
+                maxX: 0,
+                minY: maxOffsetY,
+                maxY: 0
+            };
+        }
+
+        // Make canvas fill the entire window
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        const size = 300;
+        let cellSize = 48;
+        let nodeSize = cellSize * 0.4;
+        let grid = [];
+        let animationProgress = 0;
+        let isAnimating = true;
+        let hoveredNode = null;
+        let breathingPhase = 0;
+        let pulsePhase = 0;
+        let wavePhase = 0;
+        let glitchPhase = 0;
+        let digitalNoise = 0;
+        let lastFrameTime = 0;
+        let frameCount = 0;
+        let fps = 0;
+        const targetFPS = 60;
+        const frameInterval = 1000 / targetFPS;
+
+        // Definir las secciones del portfolio
+        const portfolioSections = [
+            { id: 'investigacion', title: 'Investigación', color: '#008DD5' },
+            { id: 'proyectos', title: 'Proyectos', color: '#008DD5' },
+            { id: 'publicaciones', title: 'Publicaciones', color: '#008DD5' },
+            { id: 'contacto', title: 'Contacto', color: '#008DD5' }
+        ];
+
+        // Función para asignar secciones a nodos
+        function assignSectionsToNodes() {
+            let sectionIndex = 0;
+            for (let i = 0; i < size; i++) {
+                for (let j = 0; j < size; j++) {
+                    if (grid[i][j] === 1) {
+                        grid[i][j] = {
+                            type: 1,
+                            section: portfolioSections[sectionIndex % portfolioSections.length]
+                        };
+                        sectionIndex++;
+                    }
+                }
+            }
+        }
+
+        // Función para generar ruido digital
+        function generateDigitalNoise(x, y) {
+            return Math.sin(x * 0.1 + y * 0.1 + digitalNoise) * 
+                   Math.cos(x * 0.05 - y * 0.05 + digitalNoise) * 
+                   Math.sin(digitalNoise * 0.5);
+        }
+
+        // Función para dibujar una línea con animación
+        function drawAnimatedLine(ctx, startX, startY, endX, endY, progress) {
+            const currentX = startX + (endX - startX) * progress;
+            const currentY = startY + (endY - startY) * progress;
+            
+            // Efecto de ondulación más complejo con glitch
+            const midX = (startX + currentX) / 2;
+            const midY = (startY + currentY) / 2;
+            const wave1 = Math.sin(breathingPhase + progress * Math.PI) * 2;
+            const wave2 = Math.cos(wavePhase + progress * Math.PI * 2) * 1.5;
+            const glitchOffset = Math.sin(glitchPhase + progress * Math.PI * 4) * 1.5;
+            const combinedWave = wave1 + wave2 + glitchOffset;
+            
+            // Efecto de distorsión digital
+            const noise = generateDigitalNoise(midX, midY) * 1.5;
+            
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.quadraticCurveTo(
+                midX + combinedWave + noise, 
+                midY + combinedWave + noise, 
+                currentX, 
+                currentY
+            );
+            ctx.stroke();
+        }
+
+        let compassRotation = 0;
+        let compassInterval;
+
+        // Función para rotar la brújula aleatoriamente
+        function rotateCompass() {
+            const navControls = document.querySelector('.nav-controls');
+            const randomRotation = Math.random() * 360;
+            compassRotation = randomRotation;
+            navControls.style.transform = `rotate(${compensateRotation(compassRotation)}deg)`;
+        }
+
+        // Función para compensar la rotación de los botones
+        function compensateRotation(rotation) {
+            return -rotation;
+        }
+
+        // Iniciar la rotación aleatoria de la brújula
+        function startCompassRotation() {
+            rotateCompass();
+            compassInterval = setInterval(() => {
+                if (Math.random() < 0.3) { // 30% de probabilidad de rotar
+                    rotateCompass();
+                }
+            }, 2000);
+        }
+
+        // Modificar la función moveMap para mantener la orientación correcta
+        function moveMap(direction) {
+            const boundaries = getBoundaries();
+            
+            switch(direction) {
+                case 'n': 
+                    offsetY = Math.min(boundaries.maxY, offsetY + MOVE_SPEED);
+                    break;
+                case 's': 
+                    offsetY = Math.max(boundaries.minY, offsetY - MOVE_SPEED);
+                    break;
+                case 'e': 
+                    offsetX = Math.max(boundaries.minX, offsetX - MOVE_SPEED);
+                    break;
+                case 'w': 
+                    offsetX = Math.min(boundaries.maxX, offsetX + MOVE_SPEED);
+                    break;
+                case 'nw': 
+                    offsetX = Math.min(boundaries.maxX, offsetX + MOVE_SPEED);
+                    offsetY = Math.min(boundaries.maxY, offsetY + MOVE_SPEED);
+                    break;
+                case 'ne': 
+                    offsetX = Math.max(boundaries.minX, offsetX - MOVE_SPEED);
+                    offsetY = Math.min(boundaries.maxY, offsetY + MOVE_SPEED);
+                    break;
+                case 'sw': 
+                    offsetX = Math.min(boundaries.maxX, offsetX + MOVE_SPEED);
+                    offsetY = Math.max(boundaries.minY, offsetY - MOVE_SPEED);
+                    break;
+                case 'se': 
+                    offsetX = Math.max(boundaries.minX, offsetX - MOVE_SPEED);
+                    offsetY = Math.max(boundaries.minY, offsetY - MOVE_SPEED);
+                    break;
+                case 'c': // Centrar
+                    offsetX = 0;
+                    offsetY = 0;
+                    break;
+            }
+            drawGrid();
+        }
+
+        // Eventos de arrastre
+        canvas.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            lastX = e.clientX;
+            lastY = e.clientY;
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                const deltaX = e.clientX - lastX;
+                const deltaY = e.clientY - lastY;
+                
+                const boundaries = getBoundaries();
+                const newOffsetX = offsetX + deltaX;
+                const newOffsetY = offsetY + deltaY;
+                
+                // Aplicar límites al arrastre
+                offsetX = Math.max(boundaries.minX, Math.min(boundaries.maxX, newOffsetX));
+                offsetY = Math.max(boundaries.minY, Math.min(boundaries.maxY, newOffsetY));
+                
+                lastX = e.clientX;
+                lastY = e.clientY;
+                
+                drawGrid();
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            isDragging = false;
+        });
+
+        // Eventos de mouse
+        canvas.addEventListener('mousemove', (event) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = Math.floor((event.clientX - rect.left - offsetX) / cellSize);
+            const y = Math.floor((event.clientY - rect.top - offsetY) / cellSize);
+            
+            if (x >= 0 && x < size && y >= 0 && y < size && grid[y][x] !== 0) {
+                hoveredNode = { x, y };
+            } else {
+                hoveredNode = null;
+            }
+            
+            drawGrid();
+        });
+
+        let currentSection = null;
+        let isTransitioning = false;
+        let fadeOutProgress = 0;
+        let fadeOutInterval = null;
+
+        // Modificar el evento click para iniciar la transición
+        canvas.addEventListener('click', (event) => {
+            if (isTransitioning) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = Math.floor((event.clientX - rect.left - offsetX) / cellSize);
+            const y = Math.floor((event.clientY - rect.top - offsetY) / cellSize);
+            
+            if (x >= 0 && x < size && y >= 0 && y < size && 
+                grid[y][x] !== 0 && grid[y][x].type === 1) {
+                const section = grid[y][x].section;
+                startTransition(section, x, y);
+            }
+        });
+
+        function startTransition(section, startX, startY) {
+            isTransitioning = true;
+            currentSection = section;
+            fadeOutProgress = 0;
+            
+            // Iniciar el fuego desde el punto seleccionado
+            grid[startY][startX] = { type: 2 };
+            
+            // Mostrar la sección pero con opacidad 0
+            const sectionElement = document.getElementById(section.id);
+            sectionElement.classList.add('visible');
+            
+            // Iniciar la propagación del fuego
+            propagateFire(() => {
+                // Callback cuando el fuego termina de propagarse
+                setTimeout(() => {
+                    isTransitioning = false;
+                    if (fadeOutInterval) clearInterval(fadeOutInterval);
+                }, 500);
+            });
+
+            // Iniciar el fade out gradual
+            startFadeOut();
+        }
+
+        function startFadeOut() {
+            fadeOutInterval = setInterval(() => {
+                fadeOutProgress += 0.05;
+                if (fadeOutProgress >= 1) {
+                    clearInterval(fadeOutInterval);
+                    return;
+                }
+                drawGrid();
+            }, 15);
+        }
+
+        // Modificar la función propagateFire para incluir un callback
+        function propagateFire(onComplete) {
+            let fireSpreading = true;
+            let interval = setInterval(() => {
+                fireSpreading = false;
+                let newGrid = JSON.parse(JSON.stringify(grid));
+
+                for (let i = 0; i < size; i++) {
+                    for (let j = 0; j < size; j++) {
+                        if (grid[i][j].type === 2) {
+                            newGrid[i][j] = { type: 0, burned: true };
+                            if (i > 0 && grid[i - 1][j].type === 1) newGrid[i - 1][j] = { type: 2 };
+                            if (i < size - 1 && grid[i + 1][j].type === 1) newGrid[i + 1][j] = { type: 2 };
+                            if (j > 0 && grid[i][j - 1].type === 1) newGrid[i][j - 1] = { type: 2 };
+                            if (j < size - 1 && grid[i][j + 1].type === 1) newGrid[i][j + 1] = { type: 2 };
+                            fireSpreading = true;
+                        }
+                    }
+                }
+                grid = newGrid;
+                drawGrid();
+                if (!fireSpreading) {
+                    clearInterval(interval);
+                    if (onComplete) onComplete();
+                }
+            }, 15);
+        }
+
+        // Optimizar el renderizado usando requestAnimationFrame con control de FPS
+        function animate(currentTime) {
+            if (!lastFrameTime) lastFrameTime = currentTime;
+            const deltaTime = currentTime - lastFrameTime;
+
+            if (deltaTime >= frameInterval) {
+                if (isAnimating) {
+                    animationProgress += 0.08;
+                    breathingPhase += 0.03;
+                    pulsePhase += 0.05;
+                    wavePhase += 0.025;
+                    glitchPhase += 0.08;
+                    digitalNoise += 0.02;
+                    
+                    if (animationProgress >= 1) {
+                        animationProgress = 1;
+                        isAnimating = false;
+                    }
+                }
+                drawGrid();
+                lastFrameTime = currentTime;
+                frameCount++;
+            }
+
+            // Calcular FPS cada segundo
+            if (currentTime - lastFrameTime >= 1000) {
+                fps = frameCount;
+                frameCount = 0;
+                lastFrameTime = currentTime;
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        // Optimizar la función drawGrid
+        function drawGrid() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.save();
+            ctx.translate(offsetX, offsetY);
+            
+            // Crear un buffer para las líneas
+            const lineBuffer = document.createElement('canvas');
+            const lineCtx = lineBuffer.getContext('2d');
+            lineBuffer.width = canvas.width;
+            lineBuffer.height = canvas.height;
+            
+            // Dibujar líneas en el buffer
+            for (let i = 0; i < size; i++) {
+                for (let j = 0; j < size; j++) {
+                    if (grid[i][j] !== 0 && !grid[i][j].burned) {
+                        const x = j * cellSize + cellSize/2;
+                        const y = i * cellSize + cellSize/2;
+                        
+                        // Optimizar las comprobaciones de líneas
+                        if (i > 0 && grid[i-1][j]?.type === grid[i][j].type && !grid[i-1][j].burned) {
+                            drawLine(lineCtx, x, y, x, (i-1) * cellSize + cellSize/2, i);
+                        }
+                        if (j > 0 && grid[i][j-1]?.type === grid[i][j].type && !grid[i][j-1].burned) {
+                            drawLine(lineCtx, x, y, (j-1) * cellSize + cellSize/2, y, i);
+                        }
+                        if (i > 0 && j > 0 && grid[i-1][j-1]?.type === grid[i][j].type && !grid[i-1][j-1].burned) {
+                            drawLine(lineCtx, x, y, (j-1) * cellSize + cellSize/2, (i-1) * cellSize + cellSize/2, i);
+                        }
+                        if (i > 0 && j < size-1 && grid[i-1][j+1]?.type === grid[i][j].type && !grid[i-1][j+1].burned) {
+                            drawLine(lineCtx, x, y, (j+1) * cellSize + cellSize/2, (i-1) * cellSize + cellSize/2, i);
+                        }
+                    }
+                }
+            }
+            
+            // Dibujar el buffer de líneas
+            ctx.drawImage(lineBuffer, 0, 0);
+            
+            // Dibujar nodos
+            for (let i = 0; i < size; i++) {
+                for (let j = 0; j < size; j++) {
+                    if (grid[i][j] !== 0 && !grid[i][j].burned) {
+                        drawNode(i, j);
+                    }
+                }
+            }
+            
+            // Efecto de scanline optimizado
+            if (fps > 30) { // Solo dibujar scanlines si tenemos buen rendimiento
+                ctx.globalAlpha = 0.05;
+                ctx.fillStyle = '#000';
+                for (let i = 0; i < canvas.height; i += 4) { // Reducir la densidad de scanlines
+                    ctx.fillRect(0, i, canvas.width, 1);
+                }
+                ctx.globalAlpha = 1;
+            }
+            
+            ctx.restore();
+        }
+
+        // Función optimizada para dibujar líneas
+        function drawLine(ctx, startX, startY, endX, endY, i) {
+            const glitchWidth = Math.sin(glitchPhase + i * 0.1) * 0.3;
+            ctx.lineWidth = 1 + Math.sin(pulsePhase + i * 0.1) * 0.5 + glitchWidth;
+            ctx.strokeStyle = '#008DD5';
+            
+            if (isAnimating) {
+                const progress = animationProgress;
+                const currentX = startX + (endX - startX) * progress;
+                const currentY = startY + (endY - startY) * progress;
+                const midX = (startX + currentX) / 2;
+                const midY = (startY + currentY) / 2;
+                
+                const wave1 = Math.sin(breathingPhase + progress * Math.PI) * 2;
+                const wave2 = Math.cos(wavePhase + progress * Math.PI * 2) * 1.5;
+                const glitchOffset = Math.sin(glitchPhase + progress * Math.PI * 4) * 1.5;
+                const combinedWave = wave1 + wave2 + glitchOffset;
+                
+                ctx.beginPath();
+                ctx.moveTo(startX, startY);
+                ctx.quadraticCurveTo(
+                    midX + combinedWave,
+                    midY + combinedWave,
+                    currentX,
+                    currentY
+                );
+                ctx.stroke();
+            } else {
+                ctx.beginPath();
+                ctx.moveTo(startX, startY);
+                ctx.lineTo(endX, endY);
+                ctx.stroke();
+            }
+        }
+
+        // Función optimizada para dibujar nodos
+        function drawNode(i, j) {
+            const x = j * cellSize + cellSize/2;
+            const y = i * cellSize + cellSize/2;
+            const isHovered = hoveredNode && hoveredNode.x === j && hoveredNode.y === i;
+            
+            const breathingScale = 1 + Math.sin(breathingPhase + i * 0.1 + j * 0.1) * 0.15;
+            const pulseScale = 1 + Math.sin(pulsePhase + i * 0.05 + j * 0.05) * 0.1;
+            const glitchScale = Math.sin(glitchPhase + i * 0.2) * 0.05;
+            const combinedScale = breathingScale * pulseScale + glitchScale;
+            const nodeScale = (isHovered ? 1.2 : combinedScale);
+            
+            ctx.beginPath();
+            ctx.arc(x, y, nodeSize/2 * nodeScale, 0, Math.PI * 2);
+            
+            if (grid[i][j].type === 2) {
+                ctx.fillStyle = '#E94F37';
+            } else if (grid[i][j].type === 1) {
+                const alpha = isTransitioning ? 1 - fadeOutProgress : 1;
+                const brightness = 1 + Math.sin(pulsePhase + i * 0.1) * 0.1;
+                const glitchAlpha = Math.sin(glitchPhase + i * 0.1) * 0.1;
+                ctx.fillStyle = isHovered ? 
+                    `rgba(0, 165, 255, ${alpha * brightness + glitchAlpha})` : 
+                    `rgba(0, 141, 213, ${alpha * brightness + glitchAlpha})`;
+            }
+            
+            ctx.fill();
+            ctx.closePath();
+
+            if (isHovered && grid[i][j].type === 1 && !isTransitioning) {
+                ctx.font = '12px Arial';
+                ctx.fillStyle = '#000';
+                ctx.textAlign = 'center';
+                const textGlitch = Math.sin(glitchPhase + i * 0.1) * 2;
+                ctx.fillText(grid[i][j].section.title, x + textGlitch, y - nodeSize);
+            }
+        }
+
+        // Optimizar el manejo de eventos
+        let rafId = null;
+        let lastMouseX = 0;
+        let lastMouseY = 0;
+
+        canvas.addEventListener('mousemove', (event) => {
+            if (rafId) cancelAnimationFrame(rafId);
+            
+            rafId = requestAnimationFrame(() => {
+                const rect = canvas.getBoundingClientRect();
+                const x = Math.floor((event.clientX - rect.left - offsetX) / cellSize);
+                const y = Math.floor((event.clientY - rect.top - offsetY) / cellSize);
+                
+                if (x >= 0 && x < size && y >= 0 && y < size && grid[y][x] !== 0) {
+                    hoveredNode = { x, y };
+                } else {
+                    hoveredNode = null;
+                }
+                
+                drawGrid();
+                rafId = null;
+            });
+        });
+
+        // Initialize grid with trees and sections
+        function initializeGrid(density) {
+            grid = Array.from({ length: size }, () =>
+                Array.from({ length: size }, () => {
+                    return Math.random() < density ? 1 : 0;
+                })
+            );
+
+            assignSectionsToNodes();
+            drawGrid();
+            animate();
+        }
+
+        initializeGrid(0.6);
+
+        // Iniciar la rotación de la brújula cuando se carga la página
+        window.addEventListener('load', startCompassRotation);
+    </script>
 </body>
-</html>
+</html> 
